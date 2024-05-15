@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banker's Algorithm</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+</style>
+</head>
+<body>
+
+<h2>Banker's Algorithm</h2>
+
+<div>
+    <label for="processes">Number of Processes:</label>
+    <input type="number" id="processes">
+</div>
+<div>
+    <label for="resources">Number of Resources:</label>
+    <input type="number" id="resources">
+</div>
+
+<div id="inputFields"></div>
+
+<button onclick="runBankersAlgorithm()">Run Banker's Algorithm</button>
+
+<div id="output"></div>
+
+<script>
+function generateInputFields() {
+    const numProcesses = parseInt(document.getElementById('processes').value);
+    const numResources = parseInt(document.getElementById('resources').value);
+
+    let inputFieldsHTML = '';
+    for (let i = 0; i < numProcesses; i++) {
+        inputFieldsHTML += `<div>Process ${i + 1} Allocated Resources:</div>`;
+        for (let j = 0; j < numResources; j++) {
+            inputFieldsHTML += `<input type="number" id="allocated_${i}_${j}" placeholder="Allocated ${j + 1}">`;
+        }
+        inputFieldsHTML += '<br>';
+
+        inputFieldsHTML += `<div>Process ${i + 1} Needed Resources:</div>`;
+        for (let j = 0; j < numResources; j++) {
+            inputFieldsHTML += `<input type="number" id="needed_${i}_${j}" placeholder="Needed ${j + 1}">`;
+        }
+        inputFieldsHTML += '<br>';
+    }
+
+    document.getElementById('inputFields').innerHTML = inputFieldsHTML;
+}
+
+function runBankersAlgorithm() {
+    const numProcesses = parseInt(document.getElementById('processes').value);
+    const numResources = parseInt(document.getElementById('resources').value);
+
+    const allocated = [];
+    const needed = [];
+    for (let i = 0; i < numProcesses; i++) {
+        const allocatedRow = [];
+        const neededRow = [];
+        for (let j = 0; j < numResources; j++) {
+            allocatedRow.push(parseInt(document.getElementById(`allocated_${i}_${j}`).value));
+            neededRow.push(parseInt(document.getElementById(`needed_${i}_${j}`).value));
+        }
+        allocated.push(allocatedRow);
+        needed.push(neededRow);
+    }
+
+    const totalResources = [];
+    for (let j = 0; j < numResources; j++) {
+        totalResources.push(parseInt(prompt(`Enter total instances of Resource ${j + 1}`)));
+    }
+
+    const available = totalResources.map((total, index) => total - allocated.reduce((acc, curr) => acc + curr[index], 0));
+
+    const output = document.getElementById('output');
+    let tableHTML = '<h3>Banker\'s Algorithm Results</h3>';
+    tableHTML += '<table>';
+    tableHTML += '<tr><th>Process</th><th>Allocated Resources</th><th>Needed Resources</th><th>Available Resources</th><th>Status</th></tr>';
+    for (let i = 0; i < numProcesses; i++) {
+        tableHTML += `<tr><td>${i + 1}</td><td>${allocated[i].join(', ')}</td><td>${needed[i].join(', ')}</td><td>${available.join(', ')}</td><td>${checkSafety(available, needed[i]) ? 'Safe' : 'Unsafe'}</td></tr>`;
+    }
+    tableHTML += '</table>';
+    if (checkSafetyForAll(available, needed)) {
+        const safeSequence = findSafeSequence(available, allocated, needed);
+        tableHTML += '<p>System is in safe state.</p>';
+        tableHTML += `<p>Safe sequence: ${safeSequence.join(' -> ')}</p>`;
+    } else {
+        tableHTML += '<p>System is in unsafe state. Deadlock detected.</p>';
+    }
+    output.innerHTML = tableHTML;
+}
+
+function checkSafety(available, needed) {
+    for (let i = 0; i < available.length; i++) {
+        if (available[i] < needed[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function checkSafetyForAll(available, neededArray) {
+    for (const needed of neededArray) {
+        if (!checkSafety(available, needed)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function findSafeSequence(available, allocated, neededArray) {
+    const numProcesses = allocated.length;
+    const work = [...available];
+    const finish = new Array(numProcesses).fill(false);
+    const safeSequence = [];
+
+    let count = 0;
+    while (count < numProcesses) {
+        let found = false;
+        for (let i = 0; i < numProcesses; i++) {
+            if (!finish[i] || checkSafety(work, neededArray[i])) {
+                for (let j = 0; j < available.length; j++) {
+                    work[j] += allocated[i][j];
+                }
+                safeSequence.push(i + 1);
+                finish[i] = true;
+                found = true;
+                count++;
+                break;
+            }
+        }
+        if (!found) {
+            break;
+        }
+    }
+
+    return safeSequence;
+}
+
+document.getElementById('processes').addEventListener('input', generateInputFields);
+document.getElementById('resources').addEventListener('input', generateInputFields);
+</script>
+
+</body>
+</html>
